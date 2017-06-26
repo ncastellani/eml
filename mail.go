@@ -83,46 +83,46 @@ func Process(r RawMessage) (m Message, e error) {
 	for _, rh := range r.RawHeaders {
 		h := Header{string(rh.Key), string(rh.Value)}
 		m.FullHeaders = append(m.FullHeaders, h)
-		switch string(rh.Key) {
-		case `Content-Type`:
+		switch strings.ToLower(string(rh.Key)) {
+		case `content-type`:
 			m.ContentType = string(rh.Value)
-		case `Message-ID`:
+		case `message-id`:
 			v := bytes.Trim(rh.Value, `<>`)
 			m.MessageId = string(v)
 			m.Id = mkId(v)
-		case `In-Reply-To`:
+		case `in-reply-to`:
 			ids := strings.Fields(string(rh.Value))
 			for _, id := range ids {
 				m.InReply = append(m.InReply, strings.Trim(id, `<> `))
 			}
-		case `References`:
+		case `references`:
 			ids := strings.Fields(string(rh.Value))
 			for _, id := range ids {
 				m.References = append(m.References, strings.Trim(id, `<> `))
 			}
-		case `Date`:
+		case `date`:
 			m.Date = ParseDate(string(rh.Value))
-		case `From`:
+		case `from`:
 			m.From, e = parseAddressList(rh.Value)
-		case `Sender`:
+		case `sender`:
 			m.Sender, e = ParseAddress(rh.Value)
-		case `Reply-To`:
+		case `reply-to`:
 			m.ReplyTo, e = parseAddressList(rh.Value)
-		case `To`:
+		case `to`:
 			m.To, e = parseAddressList(rh.Value)
-		case `Cc`:
+		case `cc`:
 			m.Cc, e = parseAddressList(rh.Value)
-		case `Bcc`:
+		case `bcc`:
 			m.Bcc, e = parseAddressList(rh.Value)
-		case `Subject`:
+		case `subject`:
 			subject, err := decoder.Parse(rh.Value)
 			if err != nil {
 				fmt.Println("Failed decode subject", err)
 			}
 			m.Subject = string(subject)
-		case `Comments`:
+		case `comments`:
 			m.Comments = append(m.Comments, string(rh.Value))
-		case `Keywords`:
+		case `keywords`:
 			ks := strings.Split(string(rh.Value), ",")
 			for _, k := range ks {
 				m.Keywords = append(m.Keywords, strings.TrimSpace(k))
