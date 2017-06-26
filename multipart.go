@@ -9,7 +9,9 @@ import (
 	"io/ioutil"
 	"mime"
 	"mime/multipart"
+	"net/mail"
 	"regexp"
+	"strings"
 )
 
 type Part struct {
@@ -24,20 +26,33 @@ type Part struct {
 // present; otherwise, it will contain a single entry, with the entire (raw)
 // message contents.
 func parseBody(ct string, body []byte) (parts []Part, err error) {
-	_, ps, err := mime.ParseMediaType(ct)
+	mt, ps, err := mime.ParseMediaType(ct)
 	if err != nil {
 		return
 	}
 
-	// if mt != "multipart/alternative" {
-	// 	parts = append(parts, Part{ct, body, nil})
-	// 	return
-	// }
-
 	boundary, ok := ps["boundary"]
 	if !ok {
-		return nil, errors.New("multipart specified without boundary")
+		if strings.HasPrefix(mt, "multipart") {
+			return nil, errors.New("multipart specified without boundary")
+		}
+
+		r := strings.NewReader(string(body))
+		m, err := mail.ReadMessage(r)
+		if err != nil {
+			return nil, err
+		}
+
+		parts = append(parts, Part{
+			Type:    mt,
+			Charset: ps["charset"],
+			Data:    body,
+			Headers: m.Header,
+		})
+
+		return parts, err
 	}
+
 	r := multipart.NewReader(bytes.NewReader(body), boundary)
 	p, err := r.NextPart()
 	for err == nil {
