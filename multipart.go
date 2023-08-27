@@ -37,7 +37,10 @@ func parseBody(ct string, body []byte) (parts []Part, err error) {
 			return nil, errors.New("multipart specified without boundary")
 		}
 
-		r := strings.NewReader(string(body))
+		// must add the CRLF at the body before calling the mail.readmessage
+		// otherwise the passed body will be interpreted as a header
+		r := strings.NewReader("\r\n" + string(body))
+
 		m, err := mail.ReadMessage(r)
 		if err != nil {
 			return nil, err
