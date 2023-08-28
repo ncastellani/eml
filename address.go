@@ -130,6 +130,11 @@ func parseMailboxAddr(ts []token) (ma MailboxAddr, err error) {
 }
 
 func parseSimpleAddr(ts []token) (l, d string, e error) {
+	// Check if there are tokens to analyize, otherwise a panic will occur
+	if len(ts) <= 1 {
+		return
+	}
+
 	// The second token must be '@' - all further tokens are stuck in the domain.
 	l = string(ts[0])
 	if !(len(ts[1]) == 1 && ts[1][0] == '@') {
