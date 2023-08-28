@@ -14,6 +14,7 @@ var (
 	atomR    = regexp.MustCompile("^[a-zA-Z0-9!#$%&`*+\\-/=?^_'{|}~]+")
 	specialR = regexp.MustCompile(`^[()<>\[\]:;@\,."]`)
 	qStringR = regexp.MustCompilePOSIX(`^"([^"]|\\")*"`)
+	uniCodes = regexp.MustCompile(`[^\x00-\x7F]+`)
 )
 
 type token []byte
@@ -35,7 +36,7 @@ Next:
 	if len(s) == 0 {
 		return
 	}
-	for _, r := range []*regexp.Regexp{dotAtomR, atomR, qStringR, specialR} {
+	for _, r := range []*regexp.Regexp{dotAtomR, atomR, uniCodes, qStringR, specialR} {
 		i := try(r, s)
 		if i > 0 {
 			ts = append(ts, s[0:i])
