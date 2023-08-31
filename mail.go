@@ -10,13 +10,16 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
+	"mime"
 	"mime/quotedprintable"
 	"regexp"
 	"strings"
 	"time"
 
 	"github.com/ncastellani/go-eml/decoder"
+	"golang.org/x/net/html/charset"
 )
 
 var benc = base64.URLEncoding
@@ -81,7 +84,11 @@ func Process(r RawMessage) (m Message, e error) {
 	m.FullHeaders = []Header{}
 	m.OptHeaders = []Header{}
 	for _, rh := range r.RawHeaders {
-		h := Header{string(rh.Key), string(rh.Value)}
+		v, err := DecodeHeader(string(rh.Value))
+		if err != nil {
+			return
+		}
+		h := Header{string(rh.Key), v}
 		m.FullHeaders = append(m.FullHeaders, h)
 		switch strings.ToLower(string(rh.Key)) {
 		case `content-type`:
@@ -290,4 +297,21 @@ Done:
 		e = errors.New("unexpected EOF")
 	}
 	return
+}
+
+func DecodeHeader(s string) (o string, err error) {
+	CharsetReader := func(label string, input io.Reader) (io.Reader, error) {
+		label = strings.Replace(label, "windows-", "cp", -1)
+		enc, _ := charset.Lookup(label)
+		return enc.NewDecoder().Reader(input), nil
+	}
+
+	mimeDecoder := mime.WordDecoder{CharsetReader: CharsetReader}
+	decodedHeader, err := mimeDecoder.DecodeHeader(s)
+
+	if err != nil {
+		return decodedHeader, fmt.Errorf("cannot decode MIME-word-encoded header %q: %w", s, err)
+	}
+
+	return decodedHeader, nil
 }
