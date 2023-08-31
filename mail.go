@@ -84,11 +84,7 @@ func Process(r RawMessage) (m Message, e error) {
 	m.FullHeaders = []Header{}
 	m.OptHeaders = []Header{}
 	for _, rh := range r.RawHeaders {
-		v, err := DecodeHeader(string(rh.Value))
-		if err != nil {
-			return
-		}
-		h := Header{string(rh.Key), v}
+		h := Header{string(rh.Key), string(rh.Value)}
 		m.FullHeaders = append(m.FullHeaders, h)
 		switch strings.ToLower(string(rh.Key)) {
 		case `content-type`:
@@ -299,7 +295,7 @@ Done:
 	return
 }
 
-func DecodeHeader(s string) (o string, err error) {
+func DecodeString(s string) (o string, err error) {
 	CharsetReader := func(label string, input io.Reader) (io.Reader, error) {
 		label = strings.Replace(label, "windows-", "cp", -1)
 		enc, _ := charset.Lookup(label)
