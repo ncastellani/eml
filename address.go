@@ -64,6 +64,11 @@ func ParseAddress(bs []byte) (Address, error) {
 }
 
 func parseAddress(toks []token) (Address, error) {
+	// Check if there are tokens to analyize, otherwise a panic will occur
+	if len(toks) == 0 {
+		return MailboxAddr{}, nil
+	}
+
 	// If this is a group, it must end in a ";" token.
 	ltok := toks[len(toks)-1]
 	if len(ltok) == 1 && ltok[0] == ';' {
