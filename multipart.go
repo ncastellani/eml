@@ -6,7 +6,6 @@ import (
 	"bytes"
 	"errors"
 	"io"
-	"io/ioutil"
 	"mime"
 	"mime/multipart"
 	"net/mail"
@@ -59,10 +58,11 @@ func parseBody(ct string, body []byte) (parts []Part, err error) {
 	r := multipart.NewReader(bytes.NewReader(body), boundary)
 	p, err := r.NextPart()
 	for err == nil {
-		data, _ := ioutil.ReadAll(p) // ignore error
+		data, _ := io.ReadAll(p) // ignore error
 		var subparts []Part
 		subparts, err = parseBody(p.Header["Content-Type"][0], data)
 		//if err == nil then body have sub multipart, and append him
+
 		if err == nil {
 			parts = append(parts, subparts...)
 		} else {
@@ -74,10 +74,15 @@ func parseBody(ct string, body []byte) (parts []Part, err error) {
 			part := Part{p.Header["Content-Type"][0], charset, data, p.Header}
 			parts = append(parts, part)
 		}
+
 		p, err = r.NextPart()
 	}
+
 	if err == io.EOF {
 		err = nil
+	} else if err.Error() == "multipart: NextPart: EOF" {
+		err = nil
 	}
+
 	return
 }
