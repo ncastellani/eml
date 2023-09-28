@@ -11,7 +11,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"mime"
 	"mime/quotedprintable"
 	"regexp"
@@ -190,7 +189,7 @@ func Process(r RawMessage) (m Message, e error) {
 									fmt.Println(er, "failed decode base64")
 								}
 							case "quoted-printable":
-								part.Data, _ = ioutil.ReadAll(quotedprintable.NewReader(bytes.NewReader(part.Data)))
+								part.Data, _ = io.ReadAll(quotedprintable.NewReader(bytes.NewReader(part.Data)))
 							}
 						}
 						m.Attachments = append(m.Attachments, Attachment{filename[1], part.Data})
