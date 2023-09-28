@@ -18,7 +18,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ncastellani/go-eml/decoder"
 	"golang.org/x/net/html/charset"
 )
 
@@ -118,7 +117,7 @@ func Process(r RawMessage) (m Message, e error) {
 		case `bcc`:
 			m.Bcc, e = parseAddressList(rh.Value)
 		case `subject`:
-			subject, err := decoder.Parse(rh.Value)
+			subject, err := Decode(rh.Value)
 			if err != nil {
 				fmt.Println("Failed decode subject", err)
 			}
@@ -152,7 +151,7 @@ func Process(r RawMessage) (m Message, e error) {
 			switch {
 			case strings.Contains(part.Type, "text/plain"):
 
-				data, err := decoder.UTF8(part.Charset, part.Data)
+				data, err := UTF8(part.Charset, part.Data)
 				if err != nil {
 					m.Text = string(part.Data)
 				} else {
@@ -160,7 +159,7 @@ func Process(r RawMessage) (m Message, e error) {
 				}
 			case strings.Contains(part.Type, "text/html"):
 
-				data, err := decoder.UTF8(part.Charset, part.Data)
+				data, err := UTF8(part.Charset, part.Data)
 				if err != nil {
 					m.Html = string(part.Data)
 				} else {
@@ -176,7 +175,7 @@ func Process(r RawMessage) (m Message, e error) {
 							break
 						}
 
-						dfilename, err := decoder.Parse([]byte(filename[1]))
+						dfilename, err := Decode([]byte(filename[1]))
 						if err != nil {
 							fmt.Println("Failed decode filename of attachment", err)
 						} else {
