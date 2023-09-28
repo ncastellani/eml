@@ -1,4 +1,4 @@
-module eml
+module github.com/ncastellani/eml
 
 go 1.21.0
 
