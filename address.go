@@ -56,6 +56,13 @@ func (ga GroupAddr) Email() string {
 }
 
 func ParseAddress(bs []byte) (Address, error) {
+
+	// UTF8 decode the address list
+	dd, e := decodeRFC2047(bs)
+	if e == nil {
+		bs = []byte(dd)
+	}
+
 	toks, err := tokenize(bs)
 	if err != nil {
 		return nil, err

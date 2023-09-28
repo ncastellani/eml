@@ -24,11 +24,20 @@ func UTF8(cs string, data []byte) ([]byte, error) {
 }
 
 func Decode(bstr []byte) (p []byte, err error) {
-	dec := new(mime.WordDecoder)
-	header, err := dec.DecodeHeader(string(bstr))
+	header, err := decodeRFC2047(bstr)
 	if err != nil {
 		return bstr, nil
 	}
 
-	return []byte(header), err
+	return header, err
+}
+
+func decodeRFC2047(d []byte) (r []byte, err error) {
+	dec := new(mime.WordDecoder)
+	p, err := dec.DecodeHeader(string(d))
+	if err != nil {
+		return d, nil
+	}
+
+	return []byte(p), err
 }
