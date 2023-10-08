@@ -58,10 +58,15 @@ func parseBody(ct string, body []byte) (parts []Part, err error) {
 	r := multipart.NewReader(bytes.NewReader(body), boundary)
 	p, err := r.NextPart()
 	for err == nil {
+		// check if this multipart part is empty
+		if len(p.Header.Values("Content-Type")) == 0 {
+			p, err = r.NextPart()
+			continue
+		}
+
 		data, _ := io.ReadAll(p) // ignore error
 		var subparts []Part
 		subparts, err = parseBody(p.Header["Content-Type"][0], data)
-		//if err == nil then body have sub multipart, and append him
 
 		if err == nil {
 			parts = append(parts, subparts...)
