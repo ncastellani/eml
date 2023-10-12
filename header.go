@@ -50,7 +50,7 @@ func parseAddressList(s []byte) ([]Address, error) {
 		}
 
 		lsb = append(lsb, p...)
-		if i != len(stb)-1 {
+		if i != len(stb)-1 && !bytes.Contains(fc, []byte("@")) {
 			comma := []byte(",")
 			lsb = append(lsb, []token{comma}...)
 		}
