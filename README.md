@@ -1,15 +1,7 @@
-#EML(RFC5322) PARSER
+##### **Golang Parser for EMLs (RFC5322)**
+##### A more complete implementation of the native net/mail package
 
-*This aims to be a more complete implementation of go's net/mail package.*
-
-
-This is parser of message in rfc5322(.eml)
-
-Split message on all headers(subject,from,to,cc,date,et.c.), body text, body html, and attachments(decodes it)
-
-add decoder for subject and attachments file name
-
-
+*Forked from: https://github.com/lukevers/eml*
 
 #### LICENSE
 Copyright (c) 2012 Scott Lawrence <bytbox@gmail.com>
