@@ -2,6 +2,10 @@
 
 package eml
 
+import (
+	"bytes"
+)
+
 func split(ts []token, s token) [][]token {
 	r, l := [][]token{}, 0
 	for i, t := range ts {
@@ -30,13 +34,40 @@ func parseAddressList(s []byte) ([]Address, error) {
 	if e != nil {
 		return al, e
 	}
-	tts := split(ts, []byte{','})
-	for _, ts := range tts {
+
+	// split by groups (,)
+	stb := split(ts, []byte{','})
+	var lsb []token
+	var vsb [][]token
+
+	for i, t := range stb {
+		var p []token
+		var fc []byte
+
+		for _, c := range t {
+			p = append(p, c)
+			fc = append(fc, c...)
+		}
+
+		lsb = append(lsb, p...)
+		if i != len(stb)-1 {
+			comma := []byte(",")
+			lsb = append(lsb, []token{comma}...)
+		}
+
+		if bytes.Contains(fc, []byte("@")) || i == len(stb)-1 {
+			vsb = append(vsb, lsb)
+			lsb = make([]token, 0)
+		}
+	}
+
+	for _, ts := range vsb {
 		a, e := parseAddress(ts)
 		if e != nil {
 			return al, e
 		}
 		al = append(al, a)
 	}
+
 	return al, nil
 }
