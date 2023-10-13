@@ -45,7 +45,7 @@ type Attachment struct {
 	Data     []byte
 }
 
-func Parse(data []byte, ignoreErrors bool) (msg Message, err error, bodyParsingErrors []error) {
+func Parse(data []byte, ignoreErrors bool) (msg Message, headersParsingErrors, bodyParsingErrors []error) {
 
 	// treat the raw data
 	raw, err := ParseRaw(data)
@@ -54,7 +54,7 @@ func Parse(data []byte, ignoreErrors bool) (msg Message, err error, bodyParsingE
 	}
 
 	// proccess the message headers and body parts
-	msg, err, bodyParsingErrors = handleMessage(raw, ignoreErrors)
+	msg, headersParsingErrors, bodyParsingErrors = handleMessage(raw, ignoreErrors)
 
 	// append the body and headers at the message
 	msg.Body = raw.Body
@@ -64,7 +64,7 @@ func Parse(data []byte, ignoreErrors bool) (msg Message, err error, bodyParsingE
 }
 
 // extract the data from each header and parse the body contents
-func handleMessage(r RawMessage, ignoreErrors bool) (msg Message, err error, bodyParsingErrors []error) {
+func handleMessage(r RawMessage, ignoreErrors bool) (msg Message, headersParsingErrors, bodyParsingErrors []error) {
 
 	// proccess and append the headers parameters
 	msg.ParsedHeaders = make(map[string][]string)
@@ -78,6 +78,8 @@ func handleMessage(r RawMessage, ignoreErrors bool) (msg Message, err error, bod
 		msg.ParsedHeaders[string(rh.Key)] = append(msg.ParsedHeaders[string(rh.Key)], string(rh.Value))
 
 		// handle key headers
+		var err error
+
 		switch strings.ToLower(string(rh.Key)) {
 		case `content-type`:
 			msg.ContentType = string(rh.Value)
@@ -123,7 +125,11 @@ func handleMessage(r RawMessage, ignoreErrors bool) (msg Message, err error, bod
 		}
 
 		if err != nil && !ignoreErrors {
-			return
+			headersParsingErrors = append(headersParsingErrors, err)
+			err = nil
+			if !ignoreErrors {
+				return
+			}
 		}
 	}
 
