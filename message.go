@@ -12,8 +12,8 @@ import (
 )
 
 type Message struct {
-	Headers []byte
-	Body    []byte
+	Headers []byte // full message headers
+	Body    []byte // message body separated from headers
 
 	// from headers
 	ParsedHeaders map[string][]string // all headers
@@ -50,6 +50,8 @@ func Parse(data []byte, ignoreErrors bool) (msg Message, headersParsingErrors, b
 	// treat the raw data
 	raw, err := ParseRaw(data)
 	if err != nil {
+		headersParsingErrors = append(headersParsingErrors, err)
+		bodyParsingErrors = append(bodyParsingErrors, err)
 		return
 	}
 
