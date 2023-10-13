@@ -45,18 +45,17 @@ type Attachment struct {
 	Data     []byte
 }
 
-func Parse(data []byte, ignoreErrors bool) (msg Message, headersParsingErrors, bodyParsingErrors []error) {
+func Parse(data []byte) (msg Message, errors []error) {
 
 	// treat the raw data
 	raw, err := ParseRaw(data)
 	if err != nil {
-		headersParsingErrors = append(headersParsingErrors, err)
-		bodyParsingErrors = append(bodyParsingErrors, err)
+		errors = append(errors, fmt.Errorf("raw parsing: %v", err))
 		return
 	}
 
 	// proccess the message headers and body parts
-	msg, headersParsingErrors, bodyParsingErrors = handleMessage(raw, ignoreErrors)
+	msg, errors = handleMessage(raw)
 
 	// append the body and headers at the message
 	msg.Body = raw.Body
@@ -66,7 +65,7 @@ func Parse(data []byte, ignoreErrors bool) (msg Message, headersParsingErrors, b
 }
 
 // extract the data from each header and parse the body contents
-func handleMessage(r RawMessage, ignoreErrors bool) (msg Message, headersParsingErrors, bodyParsingErrors []error) {
+func handleMessage(r RawMessage) (msg Message, errors []error) {
 
 	// proccess and append the headers parameters
 	msg.ParsedHeaders = make(map[string][]string)
@@ -126,12 +125,9 @@ func handleMessage(r RawMessage, ignoreErrors bool) (msg Message, headersParsing
 			}
 		}
 
-		if err != nil && !ignoreErrors {
-			headersParsingErrors = append(headersParsingErrors, err)
+		if err != nil {
+			errors = append(errors, fmt.Errorf("header parser: %v", err))
 			err = nil
-			if !ignoreErrors {
-				return
-			}
 		}
 	}
 
@@ -147,7 +143,7 @@ func handleMessage(r RawMessage, ignoreErrors bool) (msg Message, headersParsing
 		parts, e := parseBody(msg.ContentType, r.Body)
 		if e != nil {
 			msg.Text = string(r.Body) // set the whole message body as the message text
-			bodyParsingErrors = append(bodyParsingErrors, e)
+			errors = append(errors, fmt.Errorf("body parser: %v", e))
 			return
 		}
 
@@ -177,13 +173,13 @@ func handleMessage(r RawMessage, ignoreErrors bool) (msg Message, headersParsing
 					if strings.Contains(cd[0], "attachment") {
 						filename := regexp.MustCompile("(?msi)name=\"(.*?)\"").FindStringSubmatch(cd[0]) //.FindString(cd[0])
 						if len(filename) < 2 {
-							bodyParsingErrors = append(bodyParsingErrors, fmt.Errorf("failed get filename from header Content-Disposition"))
+							errors = append(errors, fmt.Errorf("body parser: failed get filename from header Content-Disposition"))
 							break
 						}
 
 						dfilename, e := Decode([]byte(filename[1]))
 						if e != nil {
-							bodyParsingErrors = append(bodyParsingErrors, fmt.Errorf("failed decode filename of attachment [msg: %v]", e))
+							errors = append(errors, fmt.Errorf("body parser: failed decode filename of attachment [msg: %v]", e))
 						} else {
 							filename[1] = string(dfilename)
 						}
@@ -193,7 +189,7 @@ func handleMessage(r RawMessage, ignoreErrors bool) (msg Message, headersParsing
 							case "base64":
 								part.Data, e = base64.StdEncoding.DecodeString(string(part.Data))
 								if e != nil {
-									bodyParsingErrors = append(bodyParsingErrors, fmt.Errorf("failed decode base64 [msg: %v]", e))
+									errors = append(errors, fmt.Errorf("body parser: failed decode base64 [msg: %v]", e))
 								}
 							case "quoted-printable":
 								part.Data, _ = io.ReadAll(quotedprintable.NewReader(bytes.NewReader(part.Data)))
