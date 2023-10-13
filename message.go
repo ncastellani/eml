@@ -18,7 +18,7 @@ type Message struct {
 	// from headers
 	ParsedHeaders map[string][]string // all headers
 
-	MessageId   string
+	MessageID   string
 	Date        time.Time
 	Sender      Address
 	From        []Address
@@ -45,21 +45,28 @@ type Attachment struct {
 	Data     []byte
 }
 
-func Parse(data []byte) (msg Message, err error, bodyParsingErrors []error) {
+func Parse(data []byte, ignoreErrors bool) (msg Message, err error, bodyParsingErrors []error) {
+
+	// treat the raw data
 	raw, err := ParseRaw(data)
 	if err != nil {
 		return
 	}
 
-	return handleMessage(raw, &data)
+	// proccess the message headers and body parts
+	msg, err, bodyParsingErrors = handleMessage(raw, ignoreErrors)
+
+	// append the body and headers at the message
+	msg.Body = raw.Body
+	msg.Headers = extractHeaders(&raw.Body, &data)
+
+	return
 }
 
 // extract the data from each header and parse the body contents
-func handleMessage(r RawMessage, data *[]byte) (msg Message, err error, bodyParsingErrors []error) {
-	msg.Body = r.Body
-	msg.Headers = extractHeaders(&r.Body, data)
+func handleMessage(r RawMessage, ignoreErrors bool) (msg Message, err error, bodyParsingErrors []error) {
 
-	// append the headers
+	// proccess and append the headers parameters
 	msg.ParsedHeaders = make(map[string][]string)
 	for _, rh := range r.RawHeaders {
 
@@ -75,8 +82,9 @@ func handleMessage(r RawMessage, data *[]byte) (msg Message, err error, bodyPars
 		case `content-type`:
 			msg.ContentType = string(rh.Value)
 		case `message-id`:
-			v := bytes.Trim(rh.Value, `<>`)
-			msg.MessageId = string(v)
+			v := bytes.TrimSpace(rh.Value)
+			v = bytes.Trim(rh.Value, `<>`)
+			msg.MessageID = string(v)
 		case `in-reply-to`:
 			ids := strings.Fields(string(rh.Value))
 			for _, id := range ids {
@@ -114,7 +122,7 @@ func handleMessage(r RawMessage, data *[]byte) (msg Message, err error, bodyPars
 			}
 		}
 
-		if err != nil {
+		if err != nil && !ignoreErrors {
 			return
 		}
 	}
