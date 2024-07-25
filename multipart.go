@@ -9,6 +9,7 @@ import (
 	"mime"
 	"mime/multipart"
 	"net/mail"
+	"net/textproto"
 	"regexp"
 	"strings"
 )
@@ -24,7 +25,7 @@ type Part struct {
 // type is multipart, the parts slice will contain an entry for each part
 // present; otherwise, it will contain a single entry, with the entire (raw)
 // message contents.
-func parseBody(ct string, body []byte) (parts []Part, err error) {
+func parseBody(ct string, body []byte, ph textproto.MIMEHeader) (parts []Part, err error) {
 	mt, ps, err := mime.ParseMediaType(ct)
 	if err != nil {
 		return
@@ -45,11 +46,23 @@ func parseBody(ct string, body []byte) (parts []Part, err error) {
 			return nil, err
 		}
 
+		// generate the list of headers by joining the found headers
+		// with the priority to the textproto ones
+		headers := make(map[string][]string)
+
+		for k, v := range m.Header {
+			headers[k] = v
+		}
+
+		for k, v := range ph {
+			headers[k] = v
+		}
+
 		parts = append(parts, Part{
 			Type:    mt,
 			Charset: ps["charset"],
 			Data:    body,
-			Headers: m.Header,
+			Headers: headers,
 		})
 
 		return parts, err
@@ -66,7 +79,7 @@ func parseBody(ct string, body []byte) (parts []Part, err error) {
 
 		data, _ := io.ReadAll(p) // ignore error
 		var subparts []Part
-		subparts, err = parseBody(p.Header["Content-Type"][0], data)
+		subparts, err = parseBody(p.Header["Content-Type"][0], data, p.Header)
 
 		if err == nil {
 			parts = append(parts, subparts...)

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"mime/quotedprintable"
+	"net/textproto"
 	"regexp"
 	"strings"
 	"time"
@@ -140,7 +141,7 @@ func handleMessage(r RawMessage) (msg Message, errors []error) {
 	if msg.ContentType != `` {
 
 		// try to parse the body contents with the passed content type
-		parts, e := parseBody(msg.ContentType, r.Body)
+		parts, e := parseBody(msg.ContentType, r.Body, textproto.MIMEHeader{})
 		if e != nil {
 			msg.Text = string(r.Body) // set the whole message body as the message text
 			errors = append(errors, fmt.Errorf("body parser: %v", e))
