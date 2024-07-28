@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/paulrosania/go-charset/charset"
+	_ "github.com/paulrosania/go-charset/data"
 	goCharset "golang.org/x/net/html/charset"
 )
 
@@ -22,7 +23,6 @@ func UTF8(cs string, data []byte) ([]byte, error) {
 	}
 
 	return io.ReadAll(r)
-
 }
 
 func Decode(bstr []byte) (p []byte, err error) {
