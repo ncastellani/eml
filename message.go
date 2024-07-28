@@ -149,23 +149,35 @@ func handleMessage(r RawMessage) (msg Message, errors []error) {
 		}
 
 		// handle each message part
-		for _, part := range parts {
+		for k, part := range parts {
 			switch {
 			case strings.Contains(part.Type, "text/plain"):
+				part.Data, e = decodeContentTransferEncoding(msg.ParsedHeaders, part.Headers, &part.Data)
+				if e != nil {
+					errors = append(errors, e)
+				}
+
 				data, e := UTF8(part.Charset, part.Data)
 				if e != nil {
 					msg.Text = string(part.Data)
 				} else {
 					msg.Text = string(data)
+					parts[k].Data = data
 				}
 
 				//
 			case strings.Contains(part.Type, "text/html"):
+				part.Data, e = decodeContentTransferEncoding(msg.ParsedHeaders, part.Headers, &part.Data)
+				if e != nil {
+					errors = append(errors, e)
+				}
+
 				data, e := UTF8(part.Charset, part.Data)
 				if e != nil {
 					msg.Html = string(part.Data)
 				} else {
 					msg.Html = string(data)
+					parts[k].Data = data
 				}
 
 				//
@@ -185,16 +197,9 @@ func handleMessage(r RawMessage) (msg Message, errors []error) {
 							filename[1] = string(dfilename)
 						}
 
-						if encoding, ok := part.Headers["Content-Transfer-Encoding"]; ok {
-							switch strings.ToLower(encoding[0]) {
-							case "base64":
-								part.Data, e = base64.StdEncoding.DecodeString(string(part.Data))
-								if e != nil {
-									errors = append(errors, fmt.Errorf("body parser: failed decode base64 [msg: %v]", e))
-								}
-							case "quoted-printable":
-								part.Data, _ = io.ReadAll(quotedprintable.NewReader(bytes.NewReader(part.Data)))
-							}
+						part.Data, e = decodeContentTransferEncoding(msg.ParsedHeaders, part.Headers, &part.Data)
+						if e != nil {
+							errors = append(errors, e)
 						}
 
 						msg.Attachments = append(msg.Attachments, Attachment{filename[1], part.Data})
@@ -235,4 +240,34 @@ func extractHeaders(body *[]byte, data *[]byte) []byte {
 	}
 
 	return headers
+}
+
+// generic function to handle content encoding
+func decodeContentTransferEncoding(msgHeaders, partHeaders map[string][]string, toDecode *[]byte) (decoded []byte, err error) {
+	decoded = *toDecode
+
+	// read the encoding from the part headers
+	// if it does not exists in that map, use the message headers
+	encoding := ""
+
+	if headerEncoding, ok := partHeaders["Content-Transfer-Encoding"]; ok {
+		encoding = strings.ToLower(headerEncoding[0])
+	} else {
+		if headerEncoding, ok := msgHeaders["Content-Transfer-Encoding"]; ok {
+			encoding = strings.ToLower(headerEncoding[0])
+		}
+	}
+
+	// parse the transfer encoding
+	switch strings.ToLower(encoding) {
+	case "base64":
+		decoded, err = base64.StdEncoding.DecodeString(string(*toDecode))
+		if err != nil {
+			return decoded, fmt.Errorf("body parser: failed decode base64 [msg: %v]", err)
+		}
+	case "quoted-printable":
+		decoded, _ = io.ReadAll(quotedprintable.NewReader(bytes.NewReader(*toDecode)))
+	}
+
+	return
 }
